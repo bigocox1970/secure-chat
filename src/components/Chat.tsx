@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useWallet } from '../context/WalletContext';
+import { useEncryption } from '../context/EncryptionContext';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase, Message as DbMessage, Thread, getMessages, sendMessage } from '../utils/supabase';
 
@@ -12,6 +13,7 @@ interface DisplayMessage {
   timestamp: string;
   isSent: boolean;
   status: 'sent' | 'delivered' | 'read';
+  isEncrypted: boolean;
 }
 
 const MessageStatus: React.FC<{ status: DisplayMessage['status'] }> = ({ status }) => {
@@ -52,11 +54,17 @@ const Chat = () => {
   const { chatId } = useParams();
   const { user } = useUser();
   const { wallet } = useWallet();
+  const { isEncrypted, setIsEncrypted } = useEncryption();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Auto scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   // Subscribe to new messages
   useEffect(() => {
@@ -106,7 +114,8 @@ const Chat = () => {
                   sender: senderData.username,
                   timestamp: newMessage.created_at,
                   isSent: newMessage.sender_id === user.id,
-                  status: 'delivered'
+                  status: 'delivered',
+                  isEncrypted: newMessage.is_encrypted
                 };
                 const newMessages = [...prev, displayMessage];
                 // Ensure scroll to bottom happens after state update
@@ -171,10 +180,15 @@ const Chat = () => {
           sender: senderMap.get(msg.sender_id) || 'Unknown',
           timestamp: msg.created_at,
           isSent: msg.sender_id === user.id,
-          status: 'delivered'
+          status: 'delivered',
+          isEncrypted: msg.is_encrypted
         }));
 
         setMessages(displayMessages);
+        // Set encryption status based on last message
+        if (displayMessages.length > 0) {
+          setIsEncrypted(displayMessages[displayMessages.length - 1].isEncrypted);
+        }
         scrollToBottom();
       } catch (err) {
         console.error('Error loading chat:', err);
@@ -234,7 +248,8 @@ const Chat = () => {
         sender: user.username,
         timestamp: new Date().toISOString(),
         isSent: true,
-        status: 'sent'
+        status: 'sent',
+        isEncrypted
       };
 
       setMessages(prev => [...prev, optimisticMessage]);
@@ -244,7 +259,8 @@ const Chat = () => {
       const { data, error: sendError } = await sendMessage({
         thread_id: thread.id,
         sender_id: user.id,
-        content: newMessage
+        content: newMessage,
+        is_encrypted: isEncrypted
       });
 
       if (sendError) throw sendError;
@@ -327,16 +343,47 @@ const Chat = () => {
                 <div
                   className={`group relative max-w-[65%] min-w-[120px] px-[9px] py-[6px] rounded-lg
                     ${message.isSent 
-                      ? 'bg-[#005c4b] text-[#e9edef] ml-auto rounded-tr-none' 
-                      : 'bg-[#202c33] text-[#e9edef] mr-auto rounded-tl-none'
+                      ? `bg-[#005c4b] text-[#e9edef] ml-auto rounded-tr-none border-2 ${
+                          message.isEncrypted ? 'border-green-500' : 'border-red-500'
+                        }`
+                      : `bg-[#202c33] text-[#e9edef] mr-auto rounded-tl-none border-2 ${
+                          message.isEncrypted ? 'border-green-500' : 'border-red-500'
+                        }`
                     }`}
                 >
                   <div className="relative">
                     <p className="text-[14.2px] leading-[19px] pr-4">{message.text}</p>
                     <div className="flex items-center justify-between mt-1">
-                      <p className="text-[11px] text-[#8696a0]">
-                        {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                      <div className="flex items-center">
+                        <p className="text-[11px] text-[#8696a0]">
+                          {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        <div className="flex items-center">
+                          {message.isEncrypted ? (
+                            <>
+                              {/* Locked padlock */}
+                              <svg className="w-3 h-3 ml-1 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 116 0v2h2V7a5 5 0 00-5-5z" />
+                              </svg>
+                              {/* Green checkmark */}
+                              <svg className="w-3 h-3 ml-1 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </>
+                          ) : (
+                            <>
+                              {/* Unlocked padlock */}
+                              <svg className="w-3 h-3 ml-1 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 2a5 5 0 00-5 5v2h2V7a3 3 0 116 0v2h2V7a5 5 0 00-5-5zm-5 9a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H5z" />
+                              </svg>
+                              {/* Red X */}
+                              <svg className="w-3 h-3 ml-1 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </>
+                          )}
+                        </div>
+                      </div>
                       {message.isSent && <MessageStatus status={message.status} />}
                     </div>
                   </div>

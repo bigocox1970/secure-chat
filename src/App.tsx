@@ -6,6 +6,7 @@ import ChatList from './components/ChatList';
 import { Profile } from './components/Profile';
 import UserProvider, { useUser } from './context/UserContext';
 import { useWallet, WalletProvider } from './context/WalletContext';
+import { EncryptionProvider, useEncryption } from './context/EncryptionContext';
 import { supabase } from './utils/supabase';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -136,6 +137,7 @@ function AppRoutes() {
   const [showSidebar, setShowSidebar] = useState(true);
   const { wallet } = useWallet();
   const { isAuthenticated } = useUser();
+  const { isEncrypted, setIsEncrypted } = useEncryption();
 
   // If not authenticated, only show the sign-up page
   if (!isAuthenticated) {
@@ -150,7 +152,7 @@ function AppRoutes() {
   return (
     <div className="flex h-screen overflow-hidden bg-[#0c1317]">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 h-[60px] bg-[#202c33] flex items-center px-4 z-20">
+      <div className={`fixed top-0 left-0 right-0 h-[60px] flex items-center px-4 z-20 transition-colors ${isAuthenticated ? (isEncrypted ? 'bg-[#005c4b]' : 'bg-[#8b0000]') : 'bg-[#202c33]'}`}>
         <button
           onClick={() => setShowSidebar(prev => !prev)}
           className="p-2 text-[#aebac1] hover:bg-[#374045] rounded-full"
@@ -159,7 +161,31 @@ function AppRoutes() {
             <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
           </svg>
         </button>
-        <div className="ml-4 text-[#e9edef] font-medium text-lg">SecureChat</div>
+        <div className="ml-4 flex items-center">
+          <span className="text-[#e9edef] font-medium text-lg mr-2">SecureChat</span>
+          {isAuthenticated && (
+            <button 
+              onClick={() => setIsEncrypted(!isEncrypted)}
+              className="flex items-center text-[12px] text-[#8696a0] hover:text-[#e9edef] transition-colors"
+            >
+              {isEncrypted ? (
+                <>
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 116 0v2h2V7a5 5 0 00-5-5z" />
+                  </svg>
+                  Encrypted
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2h-1V7a4 4 0 00-8 0v2H7V7a3 3 0 116 0v2z" />
+                  </svg>
+                  Not Encrypted
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main content area */}
@@ -273,7 +299,9 @@ function App() {
     <Router>
       <UserProvider>
         <WalletProvider>
-          <AppRoutes />
+          <EncryptionProvider>
+            <AppRoutes />
+          </EncryptionProvider>
         </WalletProvider>
       </UserProvider>
     </Router>
