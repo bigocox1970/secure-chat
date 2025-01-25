@@ -43,3 +43,15 @@ export function isValidXRPAddress(address: string): boolean {
     return false;
   }
 }
+
+export function validateWalletSeed(seed: string, address: string): boolean {
+  try {
+    // Try to create a wallet from the seed
+    const wallet = Wallet.fromSeed(seed);
+    
+    // Check if the wallet's address matches the provided address
+    return wallet.address === address;
+  } catch {
+    return false;
+  }
+}

@@ -1,17 +1,44 @@
 import CryptoJS from 'crypto-js';
 
-export function encryptMessage(message: string, recipientPublicKey: string): string {
-  // In a real-world scenario, we would use asymmetric encryption with the recipient's public key
-  // For this MVP, we'll use a symmetric encryption with the public key as the password
-  const encrypted = CryptoJS.AES.encrypt(message, recipientPublicKey);
-  return encrypted.toString();
+// Encrypt message using recipient's public key and thread ID as salt
+export async function encryptMessage(
+  message: string,
+  recipientPublicKey: string,
+  threadId: string
+): Promise<string> {
+  try {
+    // Use thread ID as additional salt for the encryption
+    const salt = CryptoJS.SHA256(threadId).toString();
+    
+    // Create a unique key for this thread and recipient
+    const encryptionKey = CryptoJS.PBKDF2(
+      recipientPublicKey,
+      salt,
+      { keySize: 256/32, iterations: 1000 }
+    ).toString();
+
+    // Encrypt the message
+    const encrypted = CryptoJS.AES.encrypt(message, encryptionKey);
+    
+    return encrypted.toString();
+  } catch (error) {
+    console.error('Encryption error:', error);
+    throw new Error('Failed to encrypt message');
+  }
 }
 
+// Decrypt message using private key
 export function decryptMessage(encryptedMessage: string, privateKey: string): string {
-  // In a real-world scenario, we would use the private key for asymmetric decryption
-  // For this MVP, we'll use symmetric decryption with the private key as the password
-  const decrypted = CryptoJS.AES.decrypt(encryptedMessage, privateKey);
-  return decrypted.toString(CryptoJS.enc.Utf8);
+  try {
+    // Decrypt using private key
+    const decrypted = CryptoJS.AES.decrypt(encryptedMessage, privateKey);
+    
+    // Convert to UTF8 string
+    return decrypted.toString(CryptoJS.enc.Utf8);
+  } catch (error) {
+    console.error('Decryption error:', error);
+    throw new Error('Failed to decrypt message');
+  }
 }
 
 // Helper function to securely store keys in localStorage

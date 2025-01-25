@@ -1,61 +1,47 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getFromSecureStorage, STORAGE_KEYS } from '../utils/encryption';
-import { getBalance } from '../utils/wallet';
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  isEncrypted: boolean;
+}
 
 interface UserContextType {
-  walletAddress: string | null;
-  balance: string | null;
+  user: User | null;
   isAuthenticated: boolean;
-  setWalletAddress: (address: string | null) => void;
-  updateBalance: () => Promise<void>;
+  setUser: (user: User | null) => void;
+  upgradeToEncrypted: () => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 // Export the provider component as default
 export default function UserProvider({ children }: { children: React.ReactNode }) {
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [balance, setBalance] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
   useEffect(() => {
-    // Check if user is already logged in
-    const savedAddress = getFromSecureStorage(STORAGE_KEYS.WALLET_ADDRESS);
-    if (savedAddress) {
-      setWalletAddress(savedAddress);
-      setIsAuthenticated(true);
-      updateBalance();
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('user');
     }
-  }, []);
+  }, [user]);
 
-  const updateBalance = async () => {
-    if (walletAddress) {
-      try {
-        const newBalance = await getBalance(walletAddress);
-        setBalance(newBalance);
-      } catch (error) {
-        console.error('Error fetching balance:', error);
-        setBalance(null);
-      }
+  const upgradeToEncrypted = () => {
+    if (user) {
+      setUser({ ...user, isEncrypted: true });
     }
   };
 
-  useEffect(() => {
-    if (walletAddress) {
-      setIsAuthenticated(true);
-      updateBalance();
-    } else {
-      setIsAuthenticated(false);
-      setBalance(null);
-    }
-  }, [walletAddress]);
-
   const value = {
-    walletAddress,
-    balance,
-    isAuthenticated,
-    setWalletAddress,
-    updateBalance,
+    user,
+    isAuthenticated: !!user,
+    setUser,
+    upgradeToEncrypted,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
