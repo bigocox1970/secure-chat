@@ -1,0 +1,146 @@
+[
+    {
+      "table_schema": "auth",
+      "table_name": "refresh_tokens",
+      "column_name": "session_id",
+      "foreign_table_schema": "auth",
+      "foreign_table_name": "sessions",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "objects",
+      "column_name": "bucket_id",
+      "foreign_table_schema": "storage",
+      "foreign_table_name": "buckets",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "messages",
+      "column_name": "sender_id",
+      "foreign_table_schema": "public",
+      "foreign_table_name": "profiles",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "messages",
+      "column_name": "thread_id",
+      "foreign_table_schema": "public",
+      "foreign_table_name": "threads",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "public",
+      "table_name": "wallets",
+      "column_name": "user_id",
+      "foreign_table_schema": "public",
+      "foreign_table_name": "profiles",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "saml_relay_states",
+      "column_name": "flow_state_id",
+      "foreign_table_schema": "auth",
+      "foreign_table_name": "flow_state",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "saml_relay_states",
+      "column_name": "sso_provider_id",
+      "foreign_table_schema": "auth",
+      "foreign_table_name": "sso_providers",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "sessions",
+      "column_name": "user_id",
+      "foreign_table_schema": "auth",
+      "foreign_table_name": "users",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "sso_domains",
+      "column_name": "sso_provider_id",
+      "foreign_table_schema": "auth",
+      "foreign_table_name": "sso_providers",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "mfa_amr_claims",
+      "column_name": "session_id",
+      "foreign_table_schema": "auth",
+      "foreign_table_name": "sessions",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "saml_providers",
+      "column_name": "sso_provider_id",
+      "foreign_table_schema": "auth",
+      "foreign_table_name": "sso_providers",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "identities",
+      "column_name": "user_id",
+      "foreign_table_schema": "auth",
+      "foreign_table_name": "users",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "one_time_tokens",
+      "column_name": "user_id",
+      "foreign_table_schema": "auth",
+      "foreign_table_name": "users",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "mfa_factors",
+      "column_name": "user_id",
+      "foreign_table_schema": "auth",
+      "foreign_table_name": "users",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "auth",
+      "table_name": "mfa_challenges",
+      "column_name": "factor_id",
+      "foreign_table_schema": "auth",
+      "foreign_table_name": "mfa_factors",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "s3_multipart_uploads_parts",
+      "column_name": "bucket_id",
+      "foreign_table_schema": "storage",
+      "foreign_table_name": "buckets",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "s3_multipart_uploads_parts",
+      "column_name": "upload_id",
+      "foreign_table_schema": "storage",
+      "foreign_table_name": "s3_multipart_uploads",
+      "foreign_column_name": "id"
+    },
+    {
+      "table_schema": "storage",
+      "table_name": "s3_multipart_uploads",
+      "column_name": "bucket_id",
+      "foreign_table_schema": "storage",
+      "foreign_table_name": "buckets",
+      "foreign_column_name": "id"
+    }
+  ]

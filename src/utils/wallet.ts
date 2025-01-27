@@ -1,6 +1,12 @@
 import { Wallet } from 'xrpl';
 
-export async function generateWallet(): Promise<{ address: string; seed: string }> {
+export interface WalletDetails {
+  address: string;
+  seed: string;
+  name?: string;
+}
+
+export async function generateWallet(): Promise<WalletDetails> {
   try {
     console.log('Generating XRP wallet...');
     
@@ -10,10 +16,11 @@ export async function generateWallet(): Promise<{ address: string; seed: string 
     
     console.log('Wallet generated successfully');
     
-    return { 
-      address: address || '', 
-      seed: seed || '' 
-    };
+    if (!address || !seed) {
+      throw new Error('Generated wallet is missing address or seed');
+    }
+    
+    return { address, seed };
   } catch (error) {
     console.error('Error in wallet generation:', error);
     if (error instanceof Error) {

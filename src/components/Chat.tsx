@@ -53,7 +53,7 @@ const Chat = () => {
   const [lastMessageId, setLastMessageId] = useState<string | null>(null);
   const { chatId } = useParams();
   const { user } = useUser();
-  const { wallet } = useWallet();
+  const { currentWallet } = useWallet();
   const { isEncrypted, setIsEncrypted } = useEncryption();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -68,78 +68,95 @@ const Chat = () => {
 
   // Subscribe to new messages
   useEffect(() => {
-    if (!chatId || !user || !wallet) return;
+    if (!chatId || !user || !currentWallet) return;
 
     let subscription: RealtimeChannel;
 
     const setupSubscription = async () => {
-      // Unsubscribe from any existing subscription
-      if (subscription) {
-        await subscription.unsubscribe();
-      }
+      try {
+        // Clean up any existing subscription
+        if (subscription) {
+          await supabase.removeChannel(subscription);
+        }
 
-      subscription = supabase
-        .channel(`thread:${chatId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
-            schema: 'public',
-            table: 'messages',
-            filter: `thread_id=eq.${chatId}`,
-          },
-          async (payload) => {
-            if (payload.eventType !== 'INSERT') return;
-            
-            const newMessage = payload.new as DbMessage;
-            
-            // Prevent duplicate messages
-            if (lastMessageId === newMessage.id) return;
-            setLastMessageId(newMessage.id);
+        // Create a new subscription
+        subscription = supabase
+          .channel(`chat:${chatId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'messages',
+              filter: `thread_id=eq.${chatId}`,
+            },
+            async (payload) => {
+              console.log('Received message:', payload);
+              const newMessage = payload.new as DbMessage;
+              
+              // Skip if this is a message we just sent (already handled by optimistic update)
+              if (newMessage.sender_id === user.id) {
+                console.log('Skipping own message');
+                return;
+              }
 
-            const { data: senderData } = await supabase
-              .from('profiles')
-              .select('username')
-              .eq('id', newMessage.sender_id)
-              .single();
+              try {
+                // Mark new message as read immediately
+                await supabase
+                  .from('messages')
+                  .update({ read: true })
+                  .eq('id', newMessage.id);
 
-            if (senderData) {
-              setMessages(prev => {
-                // Check if message already exists
-                if (prev.some(msg => msg.id === newMessage.id)) return prev;
-                
-                const displayMessage: DisplayMessage = {
-                  id: newMessage.id,
-                  text: newMessage.content,
-                  sender: senderData.username,
-                  timestamp: newMessage.created_at,
-                  isSent: newMessage.sender_id === user.id,
-                  status: 'delivered',
-                  isEncrypted: newMessage.is_encrypted
-                };
-                const newMessages = [...prev, displayMessage];
-                // Ensure scroll to bottom happens after state update
-                setTimeout(scrollToBottom, 0);
-                return newMessages;
-              });
+                setMessages(prev => {
+                  // Check if message already exists
+                  if (prev.some(msg => msg.id === newMessage.id)) {
+                    console.log('Message already exists');
+                    return prev;
+                  }
+                  
+                  console.log('Adding new message to state');
+                  const displayMessage: DisplayMessage = {
+                    id: newMessage.id,
+                    text: newMessage.content,
+                    sender: newMessage.sender_id,
+                    timestamp: newMessage.created_at,
+                    isSent: false,
+                    status: 'read',
+                    isEncrypted: newMessage.is_encrypted
+                  };
+                  
+                  const newMessages = [...prev, displayMessage];
+                  // Ensure scroll to bottom happens after state update
+                  setTimeout(scrollToBottom, 0);
+                  return newMessages;
+                });
+              } catch (error) {
+                console.error('Error processing new message:', error);
+              }
             }
-          }
-        )
-        .subscribe();
+          )
+          .subscribe((status) => {
+            console.log(`Subscription status for chat ${chatId}:`, status);
+          });
+
+      } catch (error) {
+        console.error('Error setting up subscription:', error);
+      }
     };
 
     setupSubscription();
 
     return () => {
       if (subscription) {
-        subscription.unsubscribe();
+        console.log('Cleaning up subscription');
+        supabase.removeChannel(subscription);
       }
     };
-  }, [chatId, user, wallet, lastMessageId]);
+  }, [chatId, user, currentWallet]);
 
   // Load thread and message history
   useEffect(() => {
-    if (!chatId || !user || !wallet) return;
+    if (!chatId || !user || !currentWallet) return;
 
     const loadThread = async () => {
       try {
@@ -162,25 +179,26 @@ const Chat = () => {
         if (messagesError) throw messagesError;
         if (!messagesData) return;
 
-        // Get all unique sender IDs
-        const senderIds = [...new Set(messagesData.map(msg => msg.sender_id))];
-
-        // Get usernames for all senders
-        const { data: sendersData } = await supabase
-          .from('profiles')
-          .select('id, username')
-          .in('id', senderIds);
-
-        const senderMap = new Map(sendersData?.map(s => [s.id, s.username]));
+        // Mark unread messages as read
+        const unreadMessages = messagesData.filter(msg => 
+          msg.sender_id !== user.id && !msg.read
+        );
+        
+        if (unreadMessages.length > 0) {
+          await supabase
+            .from('messages')
+            .update({ read: true })
+            .in('id', unreadMessages.map(msg => msg.id));
+        }
 
         // Process messages
         const displayMessages: DisplayMessage[] = messagesData.map((msg): DisplayMessage => ({
           id: msg.id,
           text: msg.content,
-          sender: senderMap.get(msg.sender_id) || 'Unknown',
+          sender: msg.sender_id,
           timestamp: msg.created_at,
           isSent: msg.sender_id === user.id,
-          status: 'delivered',
+          status: msg.read ? 'read' : 'delivered',
           isEncrypted: msg.is_encrypted
         }));
 
@@ -199,7 +217,7 @@ const Chat = () => {
     };
 
     loadThread();
-  }, [chatId, user, wallet]);
+  }, [chatId, user, currentWallet]);
 
   if (loading) {
     return (
@@ -217,7 +235,7 @@ const Chat = () => {
     );
   }
 
-  if (!thread || !user || !wallet) {
+  if (!thread || !user || !currentWallet) {
     return (
       <div className="flex-1 flex items-center justify-center text-[#8696a0]">
         No chat selected
@@ -225,8 +243,8 @@ const Chat = () => {
     );
   }
 
-  // Get the other participant's XRP address
-  const otherParticipantAddress = thread.participant1 === wallet.address
+  // Get the other participant's ID
+  const otherParticipantId = thread.participant1 === user.id
     ? thread.participant2
     : thread.participant1;
 
@@ -245,7 +263,7 @@ const Chat = () => {
       const optimisticMessage: DisplayMessage = {
         id: 'temp-' + Date.now(),
         text: newMessage,
-        sender: user.username,
+        sender: user.id,
         timestamp: new Date().toISOString(),
         isSent: true,
         status: 'sent',
@@ -255,15 +273,34 @@ const Chat = () => {
       setMessages(prev => [...prev, optimisticMessage]);
       setNewMessage('');
 
+      // Validate message data before sending
+      if (!thread.id || !user.id || !newMessage.trim()) {
+        throw new Error('Invalid message data');
+      }
+
       // Send to Supabase
       const { data, error: sendError } = await sendMessage({
         thread_id: thread.id,
         sender_id: user.id,
-        content: newMessage,
+        content: newMessage.trim(),
         is_encrypted: isEncrypted
       });
 
-      if (sendError) throw sendError;
+      if (sendError) {
+        console.error('Error sending message:', {
+          error: sendError,
+          context: {
+            thread_id: thread.id,
+            sender_id: user.id,
+            is_encrypted: isEncrypted
+          }
+        });
+        throw sendError;
+      }
+
+      if (!data) {
+        throw new Error('No data returned from sendMessage');
+      }
 
       // Update optimistic message status
       setMessages(prev =>
@@ -274,8 +311,12 @@ const Chat = () => {
         )
       );
     } catch (err) {
-      console.error('Failed to send message:', err);
-      setError('Failed to send message');
+      console.error('Failed to send message:', {
+        error: err,
+        message: err instanceof Error ? err.message : 'Unknown error',
+        details: err instanceof Error ? (err as any).details : null
+      });
+      setError(err instanceof Error ? err.message : 'Failed to send message');
       
       // Remove optimistic message on error
       setMessages(prev => prev.filter(msg => !msg.id.startsWith('temp-')));
@@ -290,13 +331,13 @@ const Chat = () => {
           <div className="relative">
             <div className="w-10 h-10 rounded-full bg-[#2a3942] flex items-center justify-center">
               <span className="text-[#aebac1] font-medium text-lg">
-                {otherParticipantAddress.slice(0, 1).toUpperCase()}
+                {otherParticipantId.slice(0, 1).toUpperCase()}
               </span>
             </div>
           </div>
           <div className="ml-4">
             <h2 className="text-[16px] text-[#e9edef] leading-[21px] font-medium">
-              {otherParticipantAddress}
+              {otherParticipantId}
             </h2>
           </div>
         </div>
