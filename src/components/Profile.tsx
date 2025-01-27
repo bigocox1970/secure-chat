@@ -13,18 +13,17 @@ export function Profile() {
   const [isGeneratingWallet, setIsGeneratingWallet] = useState(false);
   const [showSeed, setShowSeed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  if (!user) return null;
+  if (!user || !currentWallet) return null;
 
   const handleCopyAddress = () => {
-    if (!currentWallet) return;
     navigator.clipboard.writeText(currentWallet.address);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownloadWallet = () => {
-    if (!currentWallet) return;
     const walletData = {
       address: currentWallet.address,
       seed: currentWallet.seed
@@ -96,56 +95,72 @@ export function Profile() {
   };
 
   return (
-    <div className="bg-[#111b21] p-6 h-full overflow-y-auto">
-      {/* Wallet Selection and Management */}
-      <div className="bg-[#2a3942] p-4 mb-4 rounded-lg">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex-1 mr-4">
-            <h2 className="text-[#e9edef] text-xl font-medium">{user.username}</h2>
-            <p className="text-[#8696a0] text-sm">{user.email}</p>
-          </div>
-          <button
-            onClick={logout}
-            className="px-4 py-2 bg-[#374045] text-[#e9edef] rounded-lg hover:bg-[#455a64]"
-          >
-            Logout
-          </button>
+    <div className="p-4 border-b border-[#2a3942]">
+      <button 
+        onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+        className="w-full flex items-center justify-between text-[#e9edef] hover:bg-[#202c33] p-2 rounded-lg transition-colors"
+      >
+        <div className="flex items-center">
+          <h2 className="text-lg font-medium">Settings</h2>
         </div>
-        <div className="flex items-center justify-between mb-4">
-          <select
-            className="bg-[#202c33] text-[#e9edef] px-3 py-2 rounded-lg flex-1 mr-2"
-            value={currentWallet?.address || ''}
-            onChange={(e) => {
-              const selected = wallets.find(w => w.address === e.target.value);
-              if (selected) setCurrentWallet(selected);
-            }}
-          >
-            {wallets.map(w => (
-              <option key={w.address} value={w.address}>
-                {w.address.substring(0, 8) + '...'}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={handleGenerateWallet}
-            disabled={isGeneratingWallet}
-            className={`px-4 py-2 rounded-lg font-medium ${
-              isGeneratingWallet
-                ? 'bg-[#374045] text-[#8696a0] cursor-not-allowed'
-                : 'bg-[#00a884] text-[#111b21] hover:bg-[#06cf9c]'
-            }`}
-          >
-            {isGeneratingWallet ? 'Generating...' : 'New Wallet'}
-          </button>
-        </div>
+        <svg 
+          className={`w-5 h-5 transform transition-transform ${isSettingsOpen ? 'rotate-180' : ''}`} 
+          fill="currentColor" 
+          viewBox="0 0 20 20"
+        >
+          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </button>
 
-        {error && (
-          <div className="text-red-500 text-sm mb-4 px-1">
-            {error}
+      <div className={`overflow-hidden transition-all duration-300 ${isSettingsOpen ? 'max-h-[2000px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+        {/* Wallet Selection and Management */}
+        <div className="bg-[#2a3942] p-4 mb-4 rounded-lg">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex-1 mr-4">
+              <h2 className="text-[#e9edef] text-xl font-medium">{user.username}</h2>
+              <p className="text-[#8696a0] text-sm">{user.email}</p>
+            </div>
+            <button
+              onClick={logout}
+              className="px-4 py-2 bg-[#374045] text-[#e9edef] rounded-lg hover:bg-[#455a64]"
+            >
+              Logout
+            </button>
           </div>
-        )}
+          <div className="flex items-center justify-between mb-4">
+            <select
+              className="bg-[#202c33] text-[#e9edef] px-3 py-2 rounded-lg flex-1 mr-2"
+              value={currentWallet.address}
+              onChange={(e) => {
+                const selected = wallets.find(w => w.address === e.target.value);
+                if (selected) setCurrentWallet(selected);
+              }}
+            >
+              {wallets.map(w => (
+                <option key={w.address} value={w.address}>
+                  {w.address.substring(0, 8) + '...'}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleGenerateWallet}
+              disabled={isGeneratingWallet}
+              className={`px-4 py-2 rounded-lg font-medium ${
+                isGeneratingWallet
+                  ? 'bg-[#374045] text-[#8696a0] cursor-not-allowed'
+                  : 'bg-[#00a884] text-[#111b21] hover:bg-[#06cf9c]'
+              }`}
+            >
+              {isGeneratingWallet ? 'Generating...' : 'New Wallet'}
+            </button>
+          </div>
 
-        {currentWallet && (
+          {error && (
+            <div className="text-red-500 text-sm mb-4 px-1">
+              {error}
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 flex-1">
               <span className="text-[#e9edef]">
@@ -165,10 +180,8 @@ export function Profile() {
               </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
 
-      {currentWallet && (
         <div className="bg-[#2a3942] rounded-lg p-4 mb-4">
           <div className="flex justify-between items-center mb-4">
             <span className="text-[#8696a0] text-sm">Your XRP Address</span>
@@ -231,34 +244,34 @@ export function Profile() {
             </div>
           </div>
         </div>
-      )}
 
-      {/* Login Settings */}
-      <div className="bg-[#2a3942] p-4 rounded-lg mb-4">
-        <h3 className="text-[#e9edef] text-lg font-medium mb-4">Login Settings</h3>
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-[#8696a0]">Allow Password Login</span>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={user.allowPasswordLogin !== false}
-              onChange={async (e) => {
-                try {
-                  await supabase
-                    .from('profiles')
-                    .update({ allow_password_login: e.target.checked })
-                    .eq('id', user.id);
-                  togglePasswordLogin(e.target.checked);
-                } catch (error) {
-                  console.error('Failed to update password login setting:', error);
-                }
-              }}
-            />
-            <div className="w-11 h-6 bg-[#374045] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-[#8696a0] after:border-[#8696a0] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00a884] peer-checked:after:bg-white peer-checked:after:border-white"></div>
-          </label>
+        {/* Login Settings */}
+        <div className="bg-[#2a3942] p-4 rounded-lg">
+          <h3 className="text-[#e9edef] text-lg font-medium mb-4">Login Settings</h3>
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[#8696a0]">Allow Password Login</span>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={user.allowPasswordLogin !== false}
+                onChange={async (e) => {
+                  try {
+                    await supabase
+                      .from('profiles')
+                      .update({ allow_password_login: e.target.checked })
+                      .eq('id', user.id);
+                    togglePasswordLogin(e.target.checked);
+                  } catch (error) {
+                    console.error('Failed to update password login setting:', error);
+                  }
+                }}
+              />
+              <div className="w-11 h-6 bg-[#374045] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-[#8696a0] after:border-[#8696a0] after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00a884] peer-checked:after:bg-white peer-checked:after:border-white"></div>
+            </label>
+          </div>
+          <p className="text-[#8696a0] text-sm">When disabled, you can only log in using your wallet seed.</p>
         </div>
-        <p className="text-[#8696a0] text-sm">When disabled, you can only log in using your wallet seed.</p>
       </div>
     </div>
   );

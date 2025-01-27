@@ -26,7 +26,7 @@ import { NewChatModal } from './components/NewChatModal';
 function AppRoutes() {
   const [showNewChat, setShowNewChat] = useState(false);
   const [showSidebar, setShowSidebar] = useState(window.innerWidth >= 768);
-  const [activeSection, setActiveSection] = useState<'all' | 'unread' | 'new'>('all');
+  const [activeSection, setActiveSection] = useState<'none' | 'chat' | 'contacts' | 'settings'>('none');
   const { currentWallet } = useWallet();
   const { isAuthenticated } = useUser();
   const { isEncrypted, setIsEncrypted } = useEncryption();
@@ -98,17 +98,66 @@ function AppRoutes() {
         </div>
         <div className="flex-1 overflow-y-auto">
           <div className="p-4">
-            <h2 className="text-[#e9edef] text-lg font-semibold mb-2">Chat History</h2>
-            <ChatList onNewChat={() => setShowNewChat(true)} />
+            <button 
+              onClick={() => setActiveSection(activeSection === 'chat' ? 'none' : 'chat')}
+              className="w-full flex items-center justify-between text-[#e9edef] hover:bg-[#202c33] p-2 rounded-lg transition-colors"
+            >
+              <div className="flex items-center">
+                <h2 className="text-lg font-medium">Chat History</h2>
+              </div>
+              <svg 
+                className={`w-5 h-5 transform transition-transform ${activeSection === 'chat' ? 'rotate-180' : ''}`} 
+                fill="currentColor" 
+                viewBox="0 0 20 20"
+              >
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+            <div className={`overflow-hidden transition-all duration-300 ${activeSection === 'chat' ? 'max-h-[2000px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              <ChatList onNewChat={() => setShowNewChat(true)} />
+            </div>
           </div>
           <div className="p-4 border-t border-[#2a3942]">
-            <h2 className="text-[#e9edef] text-lg font-semibold mb-2">Contacts</h2>
-            {/* Add your contacts list component here */}
-            <div className="text-[#8696a0]">Contacts list coming soon...</div>
+            <button 
+              onClick={() => setActiveSection(activeSection === 'contacts' ? 'none' : 'contacts')}
+              className="w-full flex items-center justify-between text-[#e9edef] hover:bg-[#202c33] p-2 rounded-lg transition-colors"
+            >
+              <div className="flex items-center">
+                <h2 className="text-lg font-medium">Contacts</h2>
+              </div>
+              <svg 
+                className={`w-5 h-5 transform transition-transform ${activeSection === 'contacts' ? 'rotate-180' : ''}`} 
+                fill="currentColor" 
+                viewBox="0 0 20 20"
+              >
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+            <div className={`overflow-hidden transition-all duration-300 ${activeSection === 'contacts' ? 'max-h-[2000px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              {/* Add your contacts list component here */}
+              <div className="text-[#8696a0]">Contacts list coming soon...</div>
+            </div>
           </div>
           <div className="p-4 border-t border-[#2a3942]">
-            <div className="bg-[#202c33] rounded-lg p-4">
-              <h2 className="text-[#e9edef] text-lg font-semibold">Chats</h2>
+            <button 
+              onClick={() => setActiveSection(activeSection === 'settings' ? 'none' : 'settings')}
+              className="w-full flex items-center justify-between text-[#e9edef] hover:bg-[#202c33] p-2 rounded-lg transition-colors"
+            >
+              <div className="flex items-center">
+                <h2 className="text-lg font-medium">Settings</h2>
+              </div>
+              <svg 
+                className={`w-5 h-5 transform transition-transform ${activeSection === 'settings' ? 'rotate-180' : ''}`} 
+                fill="currentColor" 
+                viewBox="0 0 20 20"
+              >
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+            <div className={`overflow-hidden transition-all duration-300 ${activeSection === 'settings' ? 'max-h-[2000px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+              <div className="bg-[#202c33] rounded-lg p-4">
+                <h2 className="text-[#e9edef] text-lg font-semibold">Settings content coming soon...</h2>
+              </div>
             </div>
           </div>
         </div>
